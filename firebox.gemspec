@@ -23,5 +23,5 @@ Gem::Specification.new do |s|
   s.add_dependency "omniauth-google-oauth2", "~> 0.1.13"
   s.add_dependency "mongoid", "~> 3.0.5"
 
-  # s.add_dependency "jquery-rails"
+  s.add_development_dependency 'rspec-rails', '2.9.0'
 end

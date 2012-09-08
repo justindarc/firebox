@@ -1,7 +1,8 @@
 Firebox
 --------------
 
-Firebox is a Ruby on Rails mountable engine that can be used as the basis for social systems. The goal of the project is to provide basic functionality, such as:
+Firebox is a Ruby on Rails mountable engine that can be used as the basis for
+social systems. The goal of the project is to provide basic functionality, such as:
 
 * Local authentication
 * Authenticate via Twitter, Facebook or Google+
@@ -12,7 +13,10 @@ Firebox is a Ruby on Rails mountable engine that can be used as the basis for so
 * Ability to shorten links
 * Ability to collect analytics
 
-Unlike other libraries that exend ActiveRecord::Base to provide comments, ratings, etc, Firebox will required that the libraries be included in to the model. This keeps from cluttering up the O/R mapper of unneed items for models that do not require the functionality.
+Unlike other libraries that extend ActiveRecord::Base to provide comments,
+ratings, etc, Firebox will require that the libraries be included in to the
+model. This keeps from cluttering up the O/R mapper of unneeded items for models
+that do not require the functionality.
 
 Technologies
 --------------

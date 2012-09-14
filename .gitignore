@@ -16,4 +16,5 @@ pkg/*
 **.orig
 rerun.txt
 pickle-email-*.html
-/script/dummy/log/*
+/spec/dummy/log/*
+/spec/dummy/tmp/*

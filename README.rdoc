@@ -25,3 +25,11 @@ Firebox is currently being developed for the following environment:
 
 * Ruby 1.9.3
 * MongoDB
+
+Installation
+---------------
+
+1. Add the following line to your routes.rb file.
+
+  mount Firebox::Engine => "/firebox"
+

@@ -1,273 +1,51 @@
-# The User model contains all of the information that a particular user of our
-# site needs: their username/password, etc. It all comes from here. Even users
-# that sign up via Twitter get a User model, though it's a bit empty in that
-# particular case.
-
-require 'crypto'
-require 'bcrypt'
-
-class User
-  require 'digest/md5'
-
-  include Mongoid::Document
-
-  # Associations
-  # XXX: These don't seem to be getting set when you sign up with Twitter, etc?
-  many :authorizations, :dependent => :destroy
-
-  # Users MUST have a username
-  field :username, type: String
-
-  # Users MIGHT have an email
-  field :email, type: String
-  field :email_confirmed, type: String
-
-  # Required for confirmation
-  field :perishable_token, type: String
-
-  # Tokens are valid for 2 days, they're checked against this
-  field :perishable_token_set, type: DateTime
-
-  # User MUST be confirmed
-  key :status
-
-  # Users have a password
-  key :hashed_password, String
-
-  # Users follow many feeds
-  #field :following_ids, Array
-  #many :following, :in => :following_ids, :class_name => 'Feed'
-
-  # Users have feeds that follow them
-  #key :followers_ids, Array
-  #many :followers, :in => :followers_ids, :class_name => 'Feed'
-
-  validate :email_already_confirmed
-  validates_uniqueness_of :username, :allow_nil => :true, :case_sensitive => false
-
-  # The maximum is arbitrary
-  # Twitter has 15, let's be different
-  validates_length_of :username, :maximum => 17, :message => "must be 17 characters or fewer."
-
-  # Validate users don't have special characters in their username
-  validate :no_malformed_username
-
-  # This will establish other entities related to the User
-  after_create :finalize
-
-
-  # After a user is created, create the feed and reset the token
-  def finalize
-    reset_perishable_token
-  end
-
-  # Generate a multi-use token for account confirmation and password resets
-  def set_perishable_token
-    self.perishable_token = Digest::MD5.hexdigest( rand.to_s )
-    save
-  end
-
-  # Reset the perishable token and the date it was set to nil
-  def reset_perishable_token
-    self.perishable_token = nil
-    self.perishable_token_set = nil
-    save
-  end
-
-  # Determines a url that leads to the profile of this user
-  def url
-    "/users/#{feed.author.username}"
-  end
-
-  # Returns true when this user has a twitter authorization
-  def twitter?
-    has_authorization?(:twitter)
-  end
-
-  # Returns the twitter authorization
-  def twitter
-    get_authorization(:twitter)
-  end
-
-  # Check if a a user has a certain authorization by providing the associated
-  # provider
-  def has_authorization?(auth)
-    a = Firebox::Authorization.first(:provider => auth.to_s, :user_id => self.id)
-    #return false if not authenticated and true otherwise.
-    !a.nil?
-  end
-
-  # Get an authorization by providing the assoaciated provider
-  def get_authorization(auth)
-    Firebox::Authorization.first(:provider => auth.to_s, :user_id => self.id)
-  end
-
-  # A particular feed follows this user
-  def followed_by!(f)
-    followers << f
-    save
-  end
-
-  # A particular feed unfollows this user
-  def unfollowed_by!(f)
-    followers_ids.delete(f.id)
-    save
-  end
-
-  # Follow a particular feed
-  def follow!(f)
-    # can't follow yourself
-    if f == self.feed
-      return
-    end
-
-    following << f
-    save
-
-    if f.local?
-      # Add the inverse relationship
-      followee = Firebox::User.first(:author_id => f.author.id)
-      followee.followed_by! self.feed
-    else
-      # Queue a notification job
-      self.delay.send_follow_notification(f.id)
-    end
-    f
-  end
-
-  # Send Salmon notification so that the remote user
-  # knows this user is following them
-  def send_follow_notification(to_feed_id)
-
-  end
-
-  # unfollow takes a feed (since it is guaranteed to exist)
-  def unfollow!(followed_feed)
-    following_ids.delete(followed_feed.id)
-    save
-    if followed_feed.local?
-      followee = Firebox::User.first(:author_id => followed_feed.author.id)
-      followee.unfollowed_by!(self.feed)
-    else
-      # Queue a notification job
-      self.delay.send_unfollow_notification(followed_feed.id)
-    end
-  end
-
-  def send_unfollow_notification(to_feed_id)
+module Firebox
+  class User
+    include Mongoid::Document 
+    # Include default devise modules. Others available are:
+    # :token_authenticatable, :confirmable,
+    # :lockable, :timeoutable and 
+    devise :database_authenticatable, :registerable,
+           :recoverable, :rememberable, :trackable, :validatable
+           :omniauthable
+  
+    # Setup accessible (or protected) attributes for your model
+    attr_accessible :email, :password, :password_confirmation, :remember_me
     
-  end
+    field :first_name, type: String
+    field :last_name, type: String
+    field :email, type: String
+    field :encrypted_password, type: String
 
-  def followed_by?(f)
-    followers.include? f
-  end
+    ## Recoverable
+    field  :reset_password_token, type: String
+    field :reset_password_sent_at, type: DateTime
 
-  def following_url?(feed_url)
-    # Handle possibly created multiple feeds for the same remote_url
-    existing_feeds = Feed.all(:remote_url => feed_url)
+    ## Rememberable
+    field :remember_created_at, type: DateTime
 
-    # local feed?
-    if existing_feeds.empty? and feed_url.start_with?("http://#{author.domain}/")
-      feed_id = feed_url[/\/feeds\/(.+)$/,1]
-      existing_feeds = [Feed.first(:id => feed_id)]
-    end
+    ## Trackable
+    field :sign_in_count, type: Integer, default: 0
+    field :current_sign_in_at, type: DateTime
+    field :last_sign_in_at, type: DateTime
+    field :current_sign_in_ip, type: String
+    field :last_sign_in_ip, type: String
 
-    if existing_feeds.empty?
-      false
-    else
-      # Intersect the feeds we're following and the possibly
-      # created multiple feeds for the remote
-      !(following & existing_feeds).empty?
-    end
-  end
+    ## Confirmable
+    # field   :confirmation_token, type: String
+    # field   :confirmed_at, type: DateTime
+    # field   :confirmation_sent_at, type: DateTime
+    # field   :unconfirmed_email, type: String # Only if using reconfirmable
 
-  timestamps!
+    ## Lockable
+    # field :failed_attempts, type: Integer, default: 0 # Only if lock strategy is :failed_attempts
+    # field :unlock_token, type: String # Only if unlock strategy is :email or :both
+    # field :locked_at, type: DateTime
 
-  # Store the hash of the password
-  def password=(pass)
-    self.hashed_password = BCrypt::Password.create(pass, :cost => 10)
-  end
+    ## Token authenticatable
+    # field :authentication_token, type: String
 
-  # Create a new perishable token and set the date the token was
-  # sent so tokens can be expired after 2 days. This is used for
-  # password resets and email confirmations
-  def create_token
-    self.perishable_token_set = DateTime.now
-    set_perishable_token
-    self.perishable_token
-  end
 
-  # Set a new password, clear the date the password reset token was sent and
-  # reset the perishable token
-  def reset_password(pass)
-    self.password = pass
-    reset_perishable_token
-  end
 
-  # Authenticate the user by checking their credentials
-  def self.authenticate(username, pass)
-    user = Firebox::User.find_by_case_insensitive_username(username)
-    return nil if user.nil?
-    return user if BCrypt::Password.new(user.hashed_password) == pass
-    nil
-  end
 
-  # Edit profile information
-  def edit_user_profile(params)
-    unless params[:password].nil? or params[:password].empty?
-      if params[:password] == params[:password_confirm]
-        self.password = params[:password]
-        self.save
-      else
-        return "Passwords must match"
-      end
-    end
-
-    self.email_confirmed = self.email == params[:email]
-    self.email = params[:email]
-
-    self.save
-
-    author.name    = params[:name]
-    author.email   = params[:email]
-    author.website = params[:website]
-    author.bio     = params[:bio]
-    author.save
-
-    # TODO: Send out notice to other nodes
-    # To each remote domain that is following you via hub
-    # and to each remote domain that you follow via salmon
-    author.feed.ping_hubs
-
-    return true
-  end
-
-  # A better name would be very welcome.
-  def self.find_by_case_insensitive_username(username)
-    Firebox::User.first(:username => /^#{Regexp.escape(username)}$/i)
-  end
-
-  def token_expired?
-    self.perishable_token_set.to_time < 2.days.ago
-  end
-
-  def to_param
-    username
-  end
-
-  private
-
-  def no_malformed_username
-    unless (username =~ /[@!"#$\%&'()*,^~{}|`=:;\\\/\[\]\s?]/).nil? && (username =~ /^[.]/).nil? && (username =~ /[.]$/).nil? && (username =~ /[.]{2,}/).nil?
-      errors.add(:username, "contains restricted characters. Try sticking to letters, numbers, hyphens and underscores.")
-    end
-  end
-
-  def email_already_confirmed
-    if User.where(:email => self.email,
-      :email_confirmed => true,
-      :username.ne => self.username).count > 0
-      errors.add(:email, "is already taken.")
-    end
   end
 end

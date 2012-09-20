@@ -17,12 +17,16 @@ Gem::Specification.new do |s|
   s.test_files = Dir["spec/**/*"]
 
   s.add_dependency "rails", "~> 3.2.8"
+<<<<<<< HEAD
+  s.add_dependency "mongoid", "~> 3.0.5"
+  s.add_dependency "devise", "~> 2.1.2"
+=======
   s.add_dependency "omniauth", "~> 1.1.0"
   s.add_dependency "omniauth-identity", "~> 1.1.0"
+>>>>>>> upstream/master
   s.add_dependency "omniauth-twitter", "~> 0.0.12"
   s.add_dependency "omniauth-facebook", "~> 1.4.1"
   s.add_dependency "omniauth-google-oauth2", "~> 0.1.13"
-  s.add_dependency "mongoid", "~> 3.0.5"
-
+  
   s.add_development_dependency 'rspec-rails', '2.9.0'
 end

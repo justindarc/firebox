@@ -11,7 +11,7 @@ module Firebox
       # end
       def self.included(base)
         embeds_many :comments, as: :commentable, class_name: "Firebox::Comment"
-        include EntropiSocial::Commentable::Base::InstanceMethods
+        include Firebox::Commentable::Base::InstanceMethods
       end
     
       module InstanceMethods

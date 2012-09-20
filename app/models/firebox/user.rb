@@ -11,7 +11,8 @@ module Firebox
     # Setup accessible (or protected) attributes for your model
     attr_accessible :email, :password, :password_confirmation, :remember_me
     
-
+    field :first_name, type: String
+    field :last_name, type: String
     field :email, type: String
     field :encrypted_password, type: String
 

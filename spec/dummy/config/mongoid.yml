@@ -5,11 +5,7 @@ development:
     default:
       # Defines the name of the default database that Mongoid can connect to.
       # (required).
-<<<<<<< HEAD
-      database: dummy_development
-=======
       database: firebox_dummy_development
->>>>>>> upstream/master
       # Provides the hosts the default session can connect to. Must be an array
       # of host:port pairs. (required)
       hosts:
@@ -61,24 +57,13 @@ development:
     # use_activesupport_time_zone: true
 
     # Ensure all times are UTC in the app side. (default: false)
-<<<<<<< HEAD
-    # use_utc: false
-test:
-  sessions:
-    default:
-      database: dummy_test
-=======
     use_utc: true
 test:
   sessions:
     default:
       database: firebox_dummy_test
->>>>>>> upstream/master
       hosts:
         - localhost:27017
       options:
         consistency: :strong
-<<<<<<< HEAD
-=======
         use_utc: true
->>>>>>> upstream/master
